@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using ServiceStack.Text.Common;
 using ServiceStack.Text.Json;
@@ -922,7 +923,9 @@ namespace ServiceStack.Text
             if (JsConfig.HasntToJsonMethodSet.Contains(typeof(T)))
                 return null;
 
-            var mi = typeof(T).GetMethod("ToJson");
+            var mi = typeof(T).GetMethods()
+                .Where(m => m.Name == "ToJson" && m.GetParameters().Length == 0 && !m.IsStatic && m.ReturnType == typeof(string))
+                .SingleOrDefault();
             if (mi == null)
             {
                 JsConfig.HasntToJsonMethodSet.Add(typeof(T));
@@ -991,7 +994,10 @@ namespace ServiceStack.Text
             if (JsConfig.HasntFromJsonMethodSet.Contains(typeof(T)))
                 return null;
 
-            var mi = typeof(T).GetMethod("FromJson", BindingFlags.Public | BindingFlags.Static);
+            var mi = typeof(T).GetMethods()
+              .Where(m => m.Name == "FromJson" && m.IsStatic && m.ReturnType == typeof(T) &&
+                m.GetParameters().Where(p => p.ParameterType == typeof(string)).SingleOrDefault() != null)
+                .SingleOrDefault();
             if (mi == null)
             {
                 JsConfig.HasntFromJsonMethodSet.Add(typeof(T));
